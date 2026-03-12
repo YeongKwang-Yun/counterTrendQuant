@@ -6,7 +6,7 @@ from common.env_loader import load_project_env
 
 ENV_PATH = load_project_env()
 logger = logging.getLogger(__name__)
-logger.info(f"ENV loaded from: {ENV_PATH}")
+# logger.info(f"ENV loaded from: {ENV_PATH}")
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
@@ -14,7 +14,7 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 # 텔레그램 API 를 이용해 특정 채팅방에 메시지 전송하기.
 def send_to_telegram(chat_id, message, parse_mode="MarkdownV2"):
     try:
-        logger.info(f"Sending message to {chat_id}: {message}")
+        # logger.info(f"Sending message to {chat_id}: {message}")
 
         url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage'
         payload = {

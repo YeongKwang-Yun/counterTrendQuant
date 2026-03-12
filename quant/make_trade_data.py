@@ -140,10 +140,10 @@ def process_bybit_order(data, sort, exchange, time_frame, ticker, side, entry_pr
                 send_channel_response = send_to_channel(msg)
                 result["telegram_channel"] = send_channel_response
 
-                logger.info("--------------------------")
-                logger.info("-------send_channel_response----------")
-                logger.info(send_channel_response)
-                logger.info("--------------------------")
+                # logger.info("--------------------------")
+                # logger.info("-------send_channel_response----------")
+                # logger.info(send_channel_response)
+                # logger.info("--------------------------")
 
             except Exception as e:
                 logger.exception("[TELEGRAM] notify failed")

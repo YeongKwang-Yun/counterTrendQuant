@@ -6,7 +6,7 @@ from common.env_loader import load_project_env
 
 logger = logging.getLogger(__name__)
 ENV_PATH = load_project_env()
-logger.info(f"ENV loaded from: {ENV_PATH}")
+# logger.info(f"ENV loaded from: {ENV_PATH}")
 
 BYBIT_API_KEY = os.getenv("BYBIT_API_KEY")
 BYBIT_API_SECRET = os.getenv("BYBIT_API_SECRET")

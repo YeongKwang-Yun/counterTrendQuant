@@ -84,8 +84,8 @@ def place_order_4h(
         position_state = get_position_state(session, ticker)
         decision = classify_position_action(position_state, side)
 
-        logger.info(f"✅ place_order_4h.py >> position_state : {position_state}")
-        logger.info(f"✅ place_order_4h.py >> decision: {decision}")
+        # logger.info(f"✅ place_order_4h.py >> position_state : {position_state}")
+        # logger.info(f"✅ place_order_4h.py >> decision: {decision}")
 
         result["is_switching"] = (decision["action"] == "switch")
         result["prev_side"] = decision.get("prev_side")
@@ -237,7 +237,7 @@ def place_order_4h(
             
             # Place Order Succeed
             if response.get("retCode") == 0:
-                logger.info(f"✅ 주문 성공: {response}")
+                # logger.info(f"✅ 주문 성공: {response}")
                 record_open_result(result, response, "✅ 주문 성공 open_order: " + response.get("retMsg", "None"))
                                 
                 # Step 3: TP 설정
@@ -466,12 +466,12 @@ def place_order_4h(
                     # entry_price 를 이용하여 특정 SL 주문의 order_link_id 값 조회                    
                     sl_order = find_specific_sl_order(session, ticker, trade_id)
                     
-                    logger.info(f"✅ sl_order : {sl_order}")
+                    # logger.info(f"✅ sl_order : {sl_order}")
 
                     if sl_order:
                         sl_order_link_id = sl_order["orderLinkId"]
                         
-                        logger.info(f"✅ 흑삼병 StopLoss 주문의 orderLinkId : {sl_order_link_id}")
+                        # logger.info(f"✅ 흑삼병 StopLoss 주문의 orderLinkId : {sl_order_link_id}")
                         
                         # SL 주문 취소 
                         cancel_result = session.cancel_order(
@@ -530,7 +530,7 @@ def place_order_4h(
                     if sl_order:
                         sl_order_link_id = sl_order["orderLinkId"]
                         
-                        logger.info(f"✅ StopLoss 주문의 orderLinkId : {sl_order_link_id}")
+                        # logger.info(f"✅ StopLoss 주문의 orderLinkId : {sl_order_link_id}")
                         
                         # SL 주문 취소 
                         cancel_result = session.cancel_order(
@@ -550,7 +550,7 @@ def place_order_4h(
                         time.sleep(2)
 
                         # TP 가 체결된 경우에는 더 이상 SL 등록 없음
-                        logger.info("✅ TP 1 Hit - 잔여 StopLoss 주문 제거 완료")
+                        # logger.info("✅ TP 1 Hit - 잔여 StopLoss 주문 제거 완료")
                             
                         # 혹시 잔여물량 남았는지 체크해서 만약 잔여물량이 남았다면 더스트 킬러 작동.
                         time.sleep(0.5)
@@ -567,7 +567,7 @@ def place_order_4h(
                         update_result(result, "failed", msg, {})
                         return result    
                 elif update_gubun == "sl_hit":
-                    logger.info("✅ SL Hit - 잔여 정리 완료")
+                    # logger.info("✅ SL Hit - 잔여 정리 완료")
                             
                     # 혹시 잔여물량 남았는지 체크해서 만약 잔여물량이 남았다면 더스트 킬러 작동.
                     time.sleep(0.5)

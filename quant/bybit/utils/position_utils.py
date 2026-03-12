@@ -72,7 +72,7 @@ def kill_dust(
             )
             ok = (resp.get("retCode") == 0 and resp.get("retMsg") == "OK")
             if ok:
-                logger.info(f"✅ Dust killer executed: {symbol} posIdx={positionIdx}, size={abs_size}")
+                # logger.info(f"✅ Dust killer executed: {symbol} posIdx={positionIdx}, size={abs_size}")
                 if send_discord_message and notify in ("acted", "all"):
                     send_discord_message(
                         title=f"✅ Dust Killer executed [{time_frame}]",

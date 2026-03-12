@@ -96,7 +96,7 @@ def webhook():
 
     accepted, state = reserve_event(event_id)
     if not accepted:
-        logger.info(f"[DEDUP] ignored event_id={event_id}, state={state}, stream_key={stream_key}")
+        # logger.info(f"[DEDUP] ignored event_id={event_id}, state={state}, stream_key={stream_key}")
         return jsonify({
             "status": "duplicate_ignored",
             "event_id": event_id,

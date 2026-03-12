@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def get_position_state(session, symbol: str) -> dict:
     resp = session.get_positions(category="linear", symbol=symbol) 
     
-    logger.info(f"✅ get_position_stat : {resp}")
+    # logger.info(f"✅ get_position_stat : {resp}")
     
     if resp.get("retCode") != 0:
         raise RuntimeError(f"get_positions failed: {resp}")
@@ -52,8 +52,8 @@ def classify_position_action(position_state: dict, signal_side: str) -> dict:
     has_long = position_state.get("has_long", False)
     has_short = position_state.get("has_short", False)
 
-    logger.info(f"✅ has_long : {has_long}")
-    logger.info(f"✅ has_short : {has_short}")
+    # logger.info(f"✅ has_long : {has_long}")
+    # logger.info(f"✅ has_short : {has_short}")
 
     # 비정상 상태: hedge mode에서 양방향 동시 보유
     if has_long and has_short:

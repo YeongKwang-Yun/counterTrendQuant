@@ -52,11 +52,11 @@ def send_discord_message(title, description, color, sort=None, exchange=None, ti
         }]
     }
 
-    logger.info(
-        f"[DISCORD] sort={sort} exchange={exchange} time_frame={time_frame} "
-        f"url_selected={'yes' if discord_webhook_url else 'no'} "
-        f"title={title!r} desc_len={len(description)}"
-    )
+    # logger.info(
+    #     f"[DISCORD] sort={sort} exchange={exchange} time_frame={time_frame} "
+    #     f"url_selected={'yes' if discord_webhook_url else 'no'} "
+    #     f"title={title!r} desc_len={len(description)}"
+    # )
 
     try:
         response = requests.post(discord_webhook_url, json=payload, timeout=5)
@@ -76,7 +76,7 @@ def send_tradingview_alert_log(message: str):
         logger.warning("DISCORD_TRADINGVIEW_LOG_URL is not set.")
         return {"status": "error", "reason": "url_not_set"}
 
-    logger.info(f"[TV-RAW] attempting send, tv_url_set={bool(DISCORD_TRADINGVIEW_LOG_URL)}")
+    # logger.info(f"[TV-RAW] attempting send, tv_url_set={bool(DISCORD_TRADINGVIEW_LOG_URL)}")
     content = _truncate_text(message, 1900)
     payload = {"content": content}
 
@@ -141,7 +141,7 @@ def send_tradingview_embed_from_data(data: dict):
         logger.warning("DISCORD_TRADINGVIEW_LOG_URL is not set.")
         return {"status": "error", "reason": "url_not_set"}
 
-    logger.info(f"[TV-EMBED] attempting send, tv_url_set={bool(DISCORD_TRADINGVIEW_LOG_URL)}")
+    # logger.info(f"[TV-EMBED] attempting send, tv_url_set={bool(DISCORD_TRADINGVIEW_LOG_URL)}")
 
     title, description, color = format_tradingview_embed(data)
     payload = {"embeds": [{"title": title, "description": description, "color": color}]}

@@ -4,7 +4,7 @@ from common.env_loader import load_project_env
 
 ENV_PATH = load_project_env()
 logger = logging.getLogger(__name__)
-logger.info(f"ENV loaded from: {ENV_PATH}")
+# logger.info(f"ENV loaded from: {ENV_PATH}")
 
 def _is_empty(v) -> bool:
     if v is None:
@@ -37,7 +37,7 @@ def escape_md2(text: str) -> str:
 def make_trade_notify_message_4h(data: dict) -> str:
     ticker = (data.get("ticker") or "N/A").replace("BINANCE:", "").replace("BYBIT:", "")
     side = (data.get("side") or "").lower()
-    
+    time_frame = data.get("time_frame")
     is_long = side in ("buy", "long")
     emoji = "🟢" if is_long else "🔴"
     direction = "Long" if is_long else "Short"
@@ -68,18 +68,18 @@ def make_trade_notify_message_4h(data: dict) -> str:
         f"TP : {tp} $",
         f"SL : {sl} $",
         "",
-        "4시간 타임프레임 기준으로 발생한 시그널입니다.",
+        f"{time_frame} 타임프레임 기준으로 발생한 시그널입니다.\n",
     ]
     if is_switching:
         if prev_side:
-            body_lines.append(f"{prev_direction} 포지션 보유 중에 {direction} 시그널이 발생했습니다.")
+            body_lines.append(f"{prev_direction} 포지션 보유 중 {direction} 시그널 발생")
         else:
             body_lines.append(f"반대 방향 포지션 보유 중에 {direction} 시그널이 발생했습니다.")
-        body_lines.append(f"봇은 포지션을 스위칭하여 {direction} 포지션을 오픈했습니다.")
+        body_lines.append(f"봇은 스위칭하여 {direction} 포지션을 오픈했습니다.\n")
 
-    body_lines.append("시스템 트레이딩 관점에 대한 공유일 뿐입니다.")
+    body_lines.append("시스템 트레이딩 관점에 대한 공유일 뿐,")
     body_lines.append("고토봇은 투자를 유도하지 않습니다.")
-    title = escape_md2("GotoBot Quant Signal - BTCUSDT.P (4h)")
+    title = escape_md2(f"GotoBot Quant Signal - {ticker} ({time_frame})")
     body = "\n".join(body_lines)
 
     return f"*{title}*\n```text\n{body}\n```"

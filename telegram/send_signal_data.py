@@ -6,7 +6,7 @@ from common.env_loader import load_project_env
 
 ENV_PATH = load_project_env()
 logger = logging.getLogger(__name__)
-logger.info(f"ENV loaded from: {ENV_PATH}")
+# logger.info(f"ENV loaded from: {ENV_PATH}")
 
 GROUP_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 CHANNEL_CHAT_ID = os.getenv("TELEGRAM_CHANNEL_ID")
@@ -70,7 +70,7 @@ def send_to_channel(message):
         channel_status = channel_response.status_code
 
         if channel_status == 200:
-            logger.info(f"채널에 메시지 전송 성공")
+            # logger.info(f"채널에 메시지 전송 성공")
             channel_message_id = channel_response.json()['result']['message_id']
 
             if channel_message_id:
