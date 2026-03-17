@@ -42,9 +42,14 @@ def make_trade_notify_message_4h(data: dict) -> str:
     emoji = "🟢" if is_long else "🔴"
     direction = "Long" if is_long else "Short"
 
+    tp_raw = data.get("notify_target_price_1")
+
+    if _is_empty(tp_raw):
+        tp_raw = data.get("target_price_1")
+
     # 2) 가격 포맷
     ep = _fmt_price(data.get("entry_price"), 2) or "N/A"
-    tp = _fmt_price(data.get("target_price_1"), 2) or "N/A"
+    tp = _fmt_price(tp_raw, 2) or "N/A"
     sl = _fmt_price(data.get("stop_loss"), 2) or "N/A"
     
     is_switching = _to_bool(data.get("is_switching"))
@@ -82,6 +87,37 @@ def make_trade_notify_message_4h(data: dict) -> str:
     title = escape_md2(f"GotoBot Quant Signal - {ticker} ({time_frame})")
     body = "\n".join(body_lines)
 
+    return f"*{title}*\n```text\n{body}\n```"
+
+def make_signal_message(data: dict) -> str:
+    side = (data.get("side") or "").lower()
+    is_long = side in ("buy", "long")
+
+    emoji = "🟢" if is_long else "🔴"
+    direction = "Long" if is_long else "Short"
+
+    ep = _fmt_price(data.get("entry_price"), 1) or "N/A"
+    sl = _fmt_price(data.get("stop_loss"), 1) or "N/A"
+
+    time_frame = (data.get("time_frame") or "").lower()
+    if time_frame == "1d":
+        tf = "1D"
+    else:
+        tf = data.get("time_frame") or "N/A"
+
+    title = escape_md2(f"{emoji} GotoBot Nasdaq Signal ({tf})")
+
+    body_lines = [
+        f"Nasdaq {direction} Signal",
+        f"EP : {ep} $",
+        f"SL : {sl} $",
+        "",
+        f"{tf} 타임프레임 기준으로 발생한 시그널입니다.",
+        "나스닥 장기 추세에 대한 공유일 뿐,",
+        "고토봇은 투자를 유도하지 않습니다."
+    ]
+
+    body = "\n".join(body_lines)
     return f"*{title}*\n```text\n{body}\n```"
 
 

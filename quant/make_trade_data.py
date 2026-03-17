@@ -11,20 +11,16 @@ from telegram.send_signal_data import send_to_channel
 from common.util import send_discord_message
 from quant.bybit.utils.build_4h_title import build_4h_title
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 # 전달받은 data 가공해서 주문 함수 호출하기
 def make_trade_data(data):
     try:
+        
         exchange = data.get('exchange')                                                 # 거래소 종류
-        ticker = clean_ticker(data.get("ticker"))       # 티커 : BTCUSDT
-        data['ticker'] = ticker
-
-        bybit_response = None
         
         if exchange == "bybit":
-            bybit_response = process_bybit_order(data=data, **data)
+            bybit_response = process_bybit_order(data)
             
         return {
             "bybit": bybit_response
@@ -58,7 +54,7 @@ def make_trade_data(data):
     Bybit 에서 주문을 실행하고 결과 처리.
     주문이 성공하면 주문 조회 API 를 통해 최종 주문 상태를 확인.
 """
-def process_bybit_order(data, sort, exchange, time_frame, ticker, side, entry_price, target_price_1, stop_loss, qty, trade_id=None, order_time=None, message_type=None, update_gubun=None, tbc_gubun=None):
+def process_bybit_order(data):
     result = {
         "bybit_status": "error",
         "message": "Unknown error",
@@ -73,10 +69,40 @@ def process_bybit_order(data, sort, exchange, time_frame, ticker, side, entry_pr
         "prev_side": None,
         "telegram_channel": None,
     }
+    sort = data.get('sort')
+    exchange = data.get('exchange')
+    time_frame = data.get('time_frame')
+    message_type = data.get('message_type')
+    
     if time_frame == "4h":
-        # 포지션 오픈하기
-        order_response = bybit_place_order_4h(sort=sort, exchange=exchange, time_frame=time_frame, message_type=message_type, update_gubun=update_gubun, tbc_gubun=tbc_gubun, ticker=ticker, side=side, entry_price=entry_price, target_price_1=target_price_1, stop_loss=stop_loss, qty=qty, trade_id=trade_id)
+        update_gubun = data.get('update_gubun')
+        tbc_gubun = data.get('tbc_gubun')
+        ticker = clean_ticker(data.get("ticker"))
+        side = data.get('side')
+        entry_price = data.get('entry_price')
+        target_price_1 = data.get('target_price_1')
+        stop_loss = data.get('stop_loss')
+        qty = data.get('qty')
+        order_time = data.get("order_time")
+        trade_id = data.get('trade_id')
         
+        # 포지션 오픈하기
+        order_response = bybit_place_order_4h(
+            sort=sort,
+            exchange=exchange,
+            time_frame=time_frame,
+            message_type=message_type,
+            update_gubun=update_gubun,
+            tbc_gubun=tbc_gubun,
+            ticker=ticker,
+            side=side,
+            entry_price=entry_price,
+            target_price_1=target_price_1,
+            stop_loss=stop_loss,
+            qty=qty,
+            order_time=order_time,
+            trade_id=trade_id,
+        )   
         result.update({
             "bybit_status": order_response.get("bybit_status", "error"),
             "message": order_response.get("message", "Unknown"),
@@ -154,7 +180,6 @@ def process_bybit_order(data, sort, exchange, time_frame, ticker, side, entry_pr
         result["message"] = msg
     
     return result
-
 
 def clean_ticker(ticker: str | None) -> str:
     if not ticker:

@@ -5,6 +5,10 @@ from quant.make_trade_data import make_trade_data
 from common.util import send_tradingview_embed_from_data
 from common.env_loader import load_project_env
 
+# Telegram
+from telegram.make_signal_data import make_signal_message
+from telegram.send_signal_data import send_to_channel
+
 import logging
 import os
 import queue
@@ -50,11 +54,7 @@ def validate_env():
     if ENABLE_TELEGRAM_NOTIFY:
         if not TELEGRAM_BOT_TOKEN:
             missing_vars.append("TELEGRAM_BOT_TOKEN")
-        if not GROUP_CHAT_ID:
-            missing_vars.append("TELEGRAM_CHAT_ID")
-        if not CHANNEL_CHAT_ID:
-            missing_vars.append("TELEGRAM_CHANNEL_ID")
-    
+
     if ENABLE_BYBIT:
         if not BYBIT_API_KEY or not BYBIT_API_SECRET:
             missing_vars.append("BYBIT API KEYS")
@@ -75,67 +75,135 @@ def webhook():
     
     if not isinstance(data, dict) or not data:
         return jsonify({"error": "Invalid JSON body"}), 400
-    
-    required_fields = [
-        "sort", "exchange", "time_frame", "message_type", "update_gubun",
-        "ticker", "side", "entry_price", "target_price_1", "stop_loss", "qty", "trade_id"
-    ]
-    
-    missing_fields = [field for field in required_fields if field not in data]
-    
-    if missing_fields:
-        return jsonify({"error": f"Missing fields: {', '.join(missing_fields)}"}), 400
-        
+ 
+    valid, error_msg = validate_payload(data)
+    if not valid:
+        return jsonify({"error": error_msg}), 400
+       
     sort = data.get('sort')
-    exchange = data.get("exchange") or "unknown"
-    time_frame = data.get("time_frame") or "unknown"
-    ticker = data.get("ticker") or "unknown"
-
-    stream_key = f"{exchange}:{time_frame}:{ticker}"
     event_id = build_event_id(data)
-
+    
     accepted, state = reserve_event(event_id)
     if not accepted:
-        # logger.info(f"[DEDUP] ignored event_id={event_id}, state={state}, stream_key={stream_key}")
         return jsonify({
             "status": "duplicate_ignored",
             "event_id": event_id,
             "state": state
         }), 200
+            
     if sort == "trade":
+        stream_key = build_trade_stream_key(data)
         q = get_stream_queue(stream_key)
         q.put((event_id, data))
-
-        logger.info(f"[ENQUEUED] stream_key={stream_key}, event_id={event_id}, data={data}")
 
         return jsonify({
             "status": "accepted",
             "event_id": event_id,
             "stream_key": stream_key
         }), 200
-    elif sort != "trade":
+    elif sort == "signal":
+        try:
+            update_event_state(event_id, "processing")
+            process_signal_event(data)
+            update_event_state(event_id, "done")
+
+            return jsonify({
+                "status": "accepted",
+                "event_id": event_id,
+                "kind": "signal"
+            }), 200
+        except Exception:
+            update_event_state(event_id, "failed")
+            logger.exception(f"[SIGNAL] failed event_id={event_id}")
+            return jsonify({
+                "error": "Signal processing failed",
+                "event_id": event_id
+            }), 500
+    else:
         return jsonify({"error": f"Unsupported sort: {sort}"}), 400
     
+def validate_payload(data: dict):
+    sort = data.get("sort")
+
+    if sort == "trade":
+        required = [
+            "sort", "exchange", "time_frame", "message_type",
+            "ticker", "side", "entry_price", "stop_loss",
+            "qty", "order_time", "trade_id"
+        ]
+    elif sort == "signal":
+        required = [
+            "sort", "exchange", "time_frame", "message_type",
+            "ticker", "side", "entry_price", "stop_loss", "order_time"
+        ]
+    else:
+        return False, f"Unsupported sort: {sort}"
+
+    missing = [k for k in required if data.get(k) in (None, "")]
+    if missing:
+        return False, f"Missing fields: {', '.join(missing)}"
+
+    return True, None
+
 def build_event_id(data: dict) -> str:
-    payload = {
-        "sort": data.get("sort"),
-        "exchange": data.get("exchange"),
-        "time_frame": data.get("time_frame"),
-        "message_type": data.get("message_type"),
-        "update_gubun": data.get("update_gubun"),
-        "tbc_gubun": data.get("tbc_gubun"),
-        "ticker": data.get("ticker"),
-        "side": data.get("side"),
-        "entry_price": data.get("entry_price"),
-        "target_price_1": data.get("target_price_1"),
-        "stop_loss": data.get("stop_loss"),
-        "qty": data.get("qty"),
-        "order_time": data.get("order_time"),
-        "trade_id": data.get("trade_id"),
-    }
+    sort = data.get("sort")
+    
+    if sort == "trade":
+        payload = {
+            "sort": data.get("sort"),
+            "exchange": data.get("exchange"),
+            "time_frame": data.get("time_frame"),
+            "message_type": data.get("message_type"),
+            "update_gubun": data.get("update_gubun"),
+            "tbc_gubun": data.get("tbc_gubun"),
+            "ticker": data.get("ticker"),
+            "side": data.get("side"),
+            "entry_price": data.get("entry_price"),
+            "target_price_1": data.get("target_price_1"),
+            "stop_loss": data.get("stop_loss"),
+            "qty": data.get("qty"),
+            "order_time": data.get("order_time"),
+            "trade_id": data.get("trade_id"),
+        }
+    elif sort == "signal":
+        payload = {
+            "sort": data.get("sort"),
+            "exchange": data.get("exchange"),
+            "time_frame": data.get("time_frame"),
+            "message_type": data.get("message_type"),
+            "tbc_gubun": data.get("tbc_gubun"),
+            "ticker": data.get("ticker"),
+            "side": data.get("side"),
+            "entry_price": data.get("entry_price"),
+            "stop_loss": data.get("stop_loss"),
+            "order_time": data.get("order_time"),
+        }
+    else:
+        payload = data
+
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
+def build_trade_stream_key(data: dict) -> str:
+    exchange = data.get("exchange") or "unknown"
+    time_frame = data.get("time_frame") or "unknown"
+    ticker = data.get("ticker") or "unknown"
+    return f"trade:{exchange}:{time_frame}:{ticker}"
+
+def process_signal_event(data: dict):
+    time_frame = (data.get("time_frame") or "").lower()
+    ticker = data.get("ticker")
+
+    message = make_signal_message(data)
+    telegram_status = send_to_channel(message)
+
+    if telegram_status != 200:
+        raise RuntimeError(f"Telegram send failed: {telegram_status}")
+
+    logger.info(
+        f"[SIGNAL] success ticker={ticker} time_frame={time_frame} side={data.get('side')}"
+    )
+        
 def cleanup_expired_events(now: float):
     expired_keys = [
         event_id for event_id, meta in event_store.items()
@@ -163,11 +231,6 @@ def update_event_state(event_id: str, state: str):
             event_store[event_id]["ts"] = time.time()
             
 def process_trade_event(data: dict):
-    if ENABLE_DISCORD_NOTIFY:
-        try:
-            send_tradingview_embed_from_data(data)
-        except Exception:
-            logger.exception("Discord notify failed")
 
     response = make_trade_data(data) or {}
     bybit_status = (response.get("bybit") or {}).get("bybit_status", "error")

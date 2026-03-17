@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def place_order_4h(
     sort, exchange, time_frame, message_type, update_gubun, tbc_gubun,
     ticker, side, entry_price,
-    target_price_1=None, stop_loss=None, qty=None, order_type="Market", order_time=None, trade_id=None):
+    target_price_1=None, stop_loss=None, qty=None, trade_id=None, order_type="Market", order_time=None):
     
     result = {
         "bybit_status": "error",
@@ -264,21 +264,6 @@ def place_order_4h(
                             record_tp_result(result, tp1)
                         else:
                             record_tp_result(result, tp1, "❌ TakeProfit 주문 실패 (흑삼병 TP1)")
-                            send_discord_message(
-                                title="❌ TakeProfit placement failed [4h][TBC]",
-                                description=(
-                                    f" **Ticker :** {ticker}\n"
-                                    f" **Side :** {side}\n"
-                                    f" **TP1 :** {target_price_1}\n"
-                                    f" **TP1 Response :** ```{tp1}```\n"
-                                ),
-                                color=15158332,
-                                sort=sort,
-                                exchange="bybit",
-                                time_frame="4h",
-                                trade_id=trade_id
-                            )
-
                     except Exception as e:
                         logger.exception("❌ TBC TP1 주문 중 오류 발생")
                         tp1 = {"exception": str(e)}
@@ -293,15 +278,6 @@ def place_order_4h(
                         if stop_loss is None:
                             sl = {"skipped": True, "retMsg": "StopLoss is None — skipped SL placement"}
                             logger.warning("StopLoss is None — skipping SL placement")
-                            send_discord_message(
-                                title="⚠️ StopLoss skipped [4h][TBC]",
-                                description=f" **Ticker :** {ticker}\n SL was not provided; skipped placing SL.",
-                                color=15105570,
-                                sort=sort,
-                                exchange="bybit",
-                                time_frame="4h",
-                                trade_id=trade_id
-                            )
                         else:
                             sl = place_sl_order(side, qty_norm, stop_loss, positionIdx, ticker, session, sl_order_link_id)
 
@@ -340,38 +316,10 @@ def place_order_4h(
                             record_tp_result(result, tp1)
                         else:
                             record_tp_result(result, tp1, "❌ TakeProfit 주문 실패")
-                            send_discord_message(
-                                title="❌ TakeProfit Placement Failed [4h]",
-                                description=(
-                                    f" **Ticker :** {ticker}\n"
-                                    f" **Side :** {side}\n"
-                                    f" **TP :** {target_price_1}\n"
-                                    f" **TP1 :** ```{tp1}```"
-                                ),
-                                color=15158332,
-                                sort=sort,
-                                exchange="bybit",
-                                time_frame="4h",
-                                trade_id=trade_id
-                            )
-
                     except Exception as e:
                         logger.exception("❌ TakeProfit 주문 중 오류 발생")
                         tp1 = {"exception": str(e)}
                         record_tp_result(result, tp1, "❌ TakeProfit 주문 중 오류 발생")
-                        send_discord_message(
-                            title="🚨 **Unhandled Exception - place_order_4h.py (tp_place)**",
-                            description=(
-                                f" **Ticker:** {ticker}\n"
-                                f" **TP :** {target_price_1}\n"
-                                f" **Exception:** {str(e)}"
-                            ),
-                            color=15158332,
-                            sort=sort,
-                            exchange="bybit",
-                            time_frame="4h",
-                            trade_id=trade_id
-                        )
                     # Step 4: Place SL Order
                     sl = None
                     try:
@@ -379,15 +327,6 @@ def place_order_4h(
 
                         if stop_loss is None:
                             sl = {"skipped": True, "retMsg": "StopLoss is None — skipped SL placement"}
-                            send_discord_message(
-                                title="⚠️ StopLoss skipped",
-                                description=f"📌 **Ticker:** {ticker}\nℹ️ SL was not provided; skipped placing SL.",
-                                color=15105570,
-                                sort=sort,
-                                exchange="bybit",
-                                time_frame="4h",
-                                trade_id=trade_id
-                            )
                         else:
                             sl = place_sl_order(side, qty_norm, stop_loss, positionIdx, ticker, session, sl_order_link_id)
 
@@ -401,60 +340,18 @@ def place_order_4h(
                         logger.exception("❌ StopLoss 주문 중 오류 발생")
                         sl = {"exception": str(e)}
                         record_sl_result(result, sl, "❌ StopLoss 주문 중 오류 발생")
-                        send_discord_message(
-                            title="🚨 **Unhandled Exception - place_order_4h.py (sl_place)**",
-                            description=(
-                                f" **Ticker:** {ticker}\n"
-                                f" **Side:** {side}\n"
-                                f" **qty:** {qty_norm}\n"
-                                f" **Exception:** {str(e)}"
-                            ),
-                            color=15158332,
-                            sort=sort,
-                            exchange="bybit",
-                            time_frame="4h",
-                            trade_id=trade_id
-                        )
             else:
                 logger.error(f"❌ 주문 실패: {response}")
 
                 err_msg = "❌ 주문 실패 open_order: " + response.get("retMsg", "Unknown error")
                 record_open_result(result, response, err_msg)
                 result["errors"].append(err_msg)
-
-                send_discord_message(
-                    title="❌ Open Order Failed (4h)",
-                    description=(
-                        f" **Ticker :** {ticker}\n"
-                        f" **Side :** {side}\n"
-                        f" **qty :** {qty_norm}\n"
-                        f" **Response :** ```{response}```"
-                    ),
-                    color=15158332,
-                    sort=sort,
-                    exchange="bybit",
-                    time_frame="4h",
-                    trade_id=trade_id
-                )
         except Exception as e:
             logger.exception("❌ Open Order 에서 예외 발생")
             err_msg = "❌ Open Order 에서 예외 발생: " + str(e)
             result["message"] = err_msg
             result["errors"].append(err_msg)
-            send_discord_message(
-                title="🚨 **Unhandled Exception - place_order_4h.py (open_order)**",
-                description=(
-                    f" **Ticker:** {ticker}\n"
-                    f" **Side:** {side}\n"
-                    f" **Qty:** {qty_norm}\n"
-                    f" **Exception:** {str(e)}"
-                ),
-                color=15158332,
-                sort=sort,
-                exchange="bybit",
-                time_frame="4h",
-                trade_id=trade_id
-            )
+
         return finalize_open_result(result)
     # CASE 2: Update StopLoss
     elif message_type == "update_sl":
