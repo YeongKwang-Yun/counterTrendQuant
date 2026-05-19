@@ -22,6 +22,13 @@ def _fmt_price(v, digits=2) -> str | None:
     except Exception:
         return s
 
+def _get_price(data: dict, *keys: str, digits: int = 1) -> str:
+    for key in keys:
+        value = data.get(key)
+        if not _is_empty(value):
+            return _fmt_price(value, digits) or "N/A"
+    return "N/A"
+
 def _to_bool(v) -> bool:
     if isinstance(v, bool):
         return v
@@ -96,8 +103,11 @@ def make_signal_message(data: dict) -> str:
     emoji = "🟢" if is_long else "🔴"
     direction = "Long" if is_long else "Short"
 
-    ep = _fmt_price(data.get("entry_price"), 1) or "N/A"
-    sl = _fmt_price(data.get("stop_loss"), 1) or "N/A"
+    ep = _get_price(data, "entry_price", digits=1)
+    tp1 = _get_price(data, "target_price_1", digits=1)
+    tp2 = _get_price(data, "target_price_2", digits=1)
+    tp3 = _get_price(data, "target_price_3", digits=1)
+    sl = _get_price(data, "stop_loss", digits=1)
 
     time_frame = (data.get("time_frame") or "").lower()
     if time_frame == "1d":
@@ -109,8 +119,11 @@ def make_signal_message(data: dict) -> str:
 
     body_lines = [
         f"Nasdaq {direction} Signal",
-        f"EP : {ep} $",
-        f"SL : {sl} $",
+        f"EP  : {ep} $",
+        f"TP1 : {tp1} $",
+        f"TP2 : {tp2} $",
+        f"TP3 : {tp3} $",
+        f"SL  : {sl} $",
         "",
         f"{tf} 타임프레임 기준으로 발생한 시그널입니다.",
         "나스닥 장기 추세에 대한 공유일 뿐,",
