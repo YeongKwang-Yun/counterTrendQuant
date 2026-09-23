@@ -6,7 +6,7 @@ from common.util import send_tradingview_embed_from_data
 from common.env_loader import load_project_env
 
 # Telegram
-from telegram.make_signal_data import make_signal_message
+from telegram.make_signal_data import make_signal_message, make_trade_notify_message_4h
 from telegram.send_signal_data import send_to_channel
 
 import logging
@@ -31,6 +31,7 @@ GROUP_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 CHANNEL_CHAT_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 
 ENABLE_BYBIT = os.getenv("ENABLE_BYBIT", "0") == "1"
+ENABLE_BYBIT_ORDER_EXECUTION = ENABLE_BYBIT and os.getenv("ENABLE_BYBIT_ORDER_EXECUTION", "0") == "1"
 ENABLE_TELEGRAM_NOTIFY = os.getenv("ENABLE_TELEGRAM_NOTIFY", "0") == "1"
 ENABLE_DISCORD_NOTIFY = os.getenv("ENABLE_DISCORD_NOTIFY", "0") == "1"
 
@@ -55,7 +56,7 @@ def validate_env():
         if not TELEGRAM_BOT_TOKEN:
             missing_vars.append("TELEGRAM_BOT_TOKEN")
 
-    if ENABLE_BYBIT:
+    if ENABLE_BYBIT_ORDER_EXECUTION:
         if not BYBIT_API_KEY or not BYBIT_API_SECRET:
             missing_vars.append("BYBIT API KEYS")
 
@@ -231,6 +232,9 @@ def update_event_state(event_id: str, state: str):
             event_store[event_id]["ts"] = time.time()
             
 def process_trade_event(data: dict):
+    if not ENABLE_BYBIT_ORDER_EXECUTION:
+        process_trade_notification_only(data)
+        return
 
     response = make_trade_data(data) or {}
     bybit_status = (response.get("bybit") or {}).get("bybit_status", "error")
@@ -242,6 +246,40 @@ def process_trade_event(data: dict):
         )
     elif bybit_status != "success":
         raise RuntimeError(f"Bybit order failed: {response}")
+
+def process_trade_notification_only(data: dict):
+    message_type = (data.get("message_type") or "").lower()
+    update_gubun = (data.get("update_gubun") or "").lower()
+    time_frame = (data.get("time_frame") or "").lower()
+
+    if time_frame != "4h":
+        logger.info(
+            f"[TRADE][NOTIFY_ONLY] skipped unsupported time_frame={data.get('time_frame')} "
+            f"ticker={data.get('ticker')}"
+        )
+        return
+
+    if message_type != "open_order" or update_gubun != "open":
+        logger.info(
+            f"[TRADE][NOTIFY_ONLY] skipped non-open event ticker={data.get('ticker')} "
+            f"message_type={data.get('message_type')} update_gubun={data.get('update_gubun')}"
+        )
+        return
+
+    notify_data = dict(data)
+    notify_data["is_switching"] = False
+    notify_data["prev_side"] = None
+
+    message = make_trade_notify_message_4h(notify_data)
+    telegram_status = send_to_channel(message)
+
+    if telegram_status != 200:
+        raise RuntimeError(f"Telegram send failed: {telegram_status}")
+
+    logger.info(
+        f"[TRADE][NOTIFY_ONLY] telegram sent ticker={data.get('ticker')} "
+        f"side={data.get('side')} message_type={data.get('message_type')}"
+    )
 
 def stream_worker(stream_key: str, q: queue.Queue):
     logger.info(f"[WORKER] started for stream_key={stream_key}")
